@@ -1,5 +1,6 @@
 # local docs
 *.pdf
+*.docx
 
 # gRPC stubs
 *_pb2.py
