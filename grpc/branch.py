@@ -1,8 +1,18 @@
-import grpc
-import example_pb2
-import example_pb2_grpc
+"""
+branch.py
+CSE 531 - gRPC Project
+tfilewic
+2025-10-22
 
-class Branch(example_pb2_grpc.RPCServicer):
+Implements Branch server logic and RPC handlers.
+"""
+
+import grpc
+import banks_pb2
+import banks_pb2_grpc
+
+
+class Branch(banks_pb2_grpc.RPCServicer):
 
     def __init__(self, id, balance, branches):
         # unique ID of the Branch
@@ -15,11 +25,58 @@ class Branch(example_pb2_grpc.RPCServicer):
         self.stubList = list()
         # a list of received messages used for debugging purpose
         self.recvMsg = list()
-        # iterate the processID of the branches
+ 
+        # add all branch stubs to stub list 
+        for branch in branches:
+            if branch != self.id:
+                port = 50000 + branch
+                channel =  grpc.insecure_channel(f"localhost:{port}")
+                self.stubList.append(banks_pb2_grpc.RPCStub(channel))
 
-        # TODO: students are expected to store the processID of the branches
-        pass
 
-    # TODO: students are expected to process requests from both Client and Branch
-    def MsgDelivery(self,request, context):
-        pass
+    def propagate(self, request):
+        for branchStub in self.stubList:
+            if (request.amount > 0):
+                branchStub.Propagate_Deposit(request)
+            elif (request.amount < 0):
+                branchStub.Propagate_Withdraw(request)
+
+
+    def Query(self, request, context):
+        return self.MsgDelivery(request, context)
+
+    def Deposit(self, request, context):
+        return self.MsgDelivery(request, context)
+
+    def Withdraw(self, request, context):
+        return self.MsgDelivery(request, context)
+
+    def Propagate_Deposit(self, request, context):
+        return self.MsgDelivery(request, context)
+
+    def Propagate_Withdraw(self, request, context):
+        return self.MsgDelivery(request, context)
+
+
+    # central handler for all incoming requests, per assignment spec
+    def MsgDelivery(self, request, context):
+       
+        if hasattr(request, "amount"):
+            response = banks_pb2.TransactionResponse()
+            if (request.amount + self.balance < 0):
+                response.result = "fail"
+            else:
+                self.balance += request.amount
+
+                if (request.id == self.id):
+                    self.propagate(request)
+
+                response.result = "success"
+
+        else:
+            response = banks_pb2.BalanceResponse()
+            response.balance = self.balance        
+        
+        return response
+
+
