@@ -2,14 +2,15 @@
 branch.py
 CSE 531 - gRPC Project
 tfilewic
-2025-10-22
+2025-10-23
 
-Implements Branch server logic and RPC handlers.
+Branch server logic and RPC handlers.
 """
 
 import grpc
 import banks_pb2
 import banks_pb2_grpc
+from utilities import create_channel
 
 
 class Branch(banks_pb2_grpc.RPCServicer):
@@ -29,8 +30,7 @@ class Branch(banks_pb2_grpc.RPCServicer):
         # add all branch stubs to stub list 
         for branch in branches:
             if branch != self.id:
-                port = 50000 + branch
-                channel =  grpc.insecure_channel(f"localhost:{port}")
+                channel =  create_channel(branch)
                 self.stubList.append(banks_pb2_grpc.RPCStub(channel))
 
 
