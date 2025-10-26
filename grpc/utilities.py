@@ -15,7 +15,7 @@ BASE_PORT = 50000   #base port used to assign ports sequentially
 QUERY = "query"
 DEPOSIT = "deposit"
 WITHDRAW = "withdraw"
-INPUT_FILE = "grpc_input.json"
+INPUT_FILE = "input.json"
 OUTPUT_FILE = "output.json"
 
 
@@ -54,7 +54,7 @@ def import_file() -> dict:
         dict: Parsed JSON data, or an empty dictionary if the file is missing or invalid.
     """
     filename = sys.argv[1] if len(sys.argv) > 1 else INPUT_FILE  #use CLI arg if given, else default file
-    
+
     try:
         with open(filename, 'r') as file:
             data = json.load(file)  #parse JSON content

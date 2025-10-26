@@ -8,6 +8,7 @@ Runs Customer events from input and writes output.
 """
 
 import json
+import grpc
 from utilities import import_file, OUTPUT_FILE
 from customer import Customer
 from time import sleep
@@ -79,5 +80,10 @@ def export(data: list[dict]):
 
 #run when script called directly
 if __name__ == "__main__":  
-    output = process_customers()
-    export(output)
+    try:
+        output = process_customers()
+        export(output)
+    except grpc.RpcError as e:
+        print(f"ERROR: {e.details()}")
+        print("Ensure all branch servers are running before starting the client.")
+        exit(1)
