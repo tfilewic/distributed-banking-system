@@ -28,7 +28,7 @@ message TransactionResponse {
 }
 
 
-service Bank {
+service RPC {
     rpc Query (BalanceRequest) returns (BalanceResponse);
     rpc Deposit (TransactionRequest) returns (TransactionResponse);
     rpc Withdraw (TransactionRequest) returns (TransactionResponse);

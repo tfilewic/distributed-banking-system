@@ -13,8 +13,13 @@ BASE_PORT = 50000
 QUERY = "query"
 DEPOSIT = "deposit"
 WITHDRAW = "withdraw"
+INPUT_FILE = "grpc_input.json"
+OUTPUT_FILE = "output.json"
 
+
+def get_port(id: int):
+    return BASE_PORT + id
 
 def create_channel(id: int):
-    port = BASE_PORT + id
+    port = get_port(id)
     return grpc.insecure_channel(f"localhost:{port}")
