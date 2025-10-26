@@ -2,6 +2,9 @@
 *.pdf
 *.docx
 
+# output file
+output.json
+
 # gRPC stubs
 *_pb2.py
 *_pb2_grpc.py
