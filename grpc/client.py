@@ -4,20 +4,30 @@ CSE 531 - gRPC Project
 tfilewic
 2025-10-26
 
-Runs customer events from input.json and writes output.json.
+Runs Customer events from input and writes output.
 """
 
 import json
 from utilities import import_file, OUTPUT_FILE
-
 from customer import Customer
 from time import sleep
 
 PROPAGATION_DELAY = 0.1
 
-def filter_output(responses):
-    events = responses.get("recv", [])
-    responses["recv"] = [
+
+def filter_output(responses: dict) -> dict:
+    """
+    Removes failed transaction events from a customer's response list.
+
+    Args:
+        responses (dict): The customer's full response containing a "recv" list of event results.
+
+    Returns:
+        dict: The same response dictionary with all events having result == "fail" removed.
+    """
+    events = responses.get("recv", [])   #get list of events from response
+
+    responses["recv"] = [   #replace recv list with filtered events 
         event for event in events 
         if event.get("result") != "fail"
     ]
@@ -25,10 +35,22 @@ def filter_output(responses):
 
 
 def process_customers() -> list[dict]:
+    """
+    Executes all customer event sequences from the input file.
 
+    Reads customer entries from the input JSON, runs each customer's
+    defined events sequentially, filters failed transactions, prints
+    results for debugging, and collects all responses for export.
+
+    Returns:
+        list[dict]: A list of processed customer response dictionaries.
+    """
+    #load input data from JSON file
     data = import_file()
+    #initialize list to store results
     output = []
 
+    #process all customer entries
     for item in data:
         if item.get("type") == "customer":
             id = item.get("id")
@@ -36,19 +58,26 @@ def process_customers() -> list[dict]:
             customer = Customer(id, events)
             customer.createStub()
             responses = customer.executeEvents()
-            responses = filter_output(responses)
-            print(json.dumps(responses, indent=2))
-            sleep(PROPAGATION_DELAY)
+            responses = filter_output(responses)    #filter out "fail"
+            sleep(PROPAGATION_DELAY)    #wait for branch propagation
             output.append(responses)
 
     return output
 
+
 def export(data: list[dict]):
+    """
+    Writes the processed customer responses to the output JSON file.
+
+    Args:
+        data (list[dict]): List of customer response dictionaries to save.
+    """
+
     with open(OUTPUT_FILE, 'w') as file:
         json.dump(data, file, indent=2)
 
 
-if __name__ == "__main__":
-
+#run when script called directly
+if __name__ == "__main__":  
     output = process_customers()
     export(output)

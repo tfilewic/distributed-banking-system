@@ -2,19 +2,21 @@
 branch.py
 CSE 531 - gRPC Project
 tfilewic
-2025-10-23
+2025-10-26
 
 Branch server logic and RPC handlers.
 """
 
-import grpc
 import banks_pb2
 import banks_pb2_grpc
 from utilities import create_channel
 
 
 class Branch(banks_pb2_grpc.RPCServicer):
-
+    """
+    Represents a branch server.
+    Handles local balance updates and propagates changes to peer branches.
+    """
     def __init__(self, id, balance, branches):
         # unique ID of the Branch
         self.id = id
@@ -35,6 +37,12 @@ class Branch(banks_pb2_grpc.RPCServicer):
 
 
     def propagate(self, request):
+        """
+        Propagates a deposit or withdrawal request to all other branches.
+
+        Args:
+            request (banks_pb2.TransactionRequest): The transaction to propagate.
+        """
         for branchStub in self.stubList:
             if (request.amount > 0):
                 branchStub.Propagate_Deposit(request)
@@ -42,6 +50,9 @@ class Branch(banks_pb2_grpc.RPCServicer):
                 branchStub.Propagate_Withdraw(request)
 
 
+    """
+    Since the assignment spec requires a central handler, all RPC interface methods delegate to MsgDelivery.
+    """
     def Query(self, request, context):
         return self.MsgDelivery(request, context)
 
@@ -58,22 +69,33 @@ class Branch(banks_pb2_grpc.RPCServicer):
         return self.MsgDelivery(request, context)
 
 
-    # central handler for all incoming requests, per assignment spec
     def MsgDelivery(self, request, context):
-       
-        if hasattr(request, "amount"):
+        """
+        Central handler for all incoming gRPC requests.
+
+        Determines request type and processes accordingly.
+
+        Args:
+            request: The gRPC request message (TransactionRequest or BalanceRequest).
+            context: The gRPC context object for the call.
+
+        Returns:
+            banks_pb2.TransactionResponse or banks_pb2.BalanceResponse:
+            The appropriate response message containing result or balance.
+        """
+        if isinstance(request, banks_pb2.TransactionRequest):   #handle deposit or withdraw
             response = banks_pb2.TransactionResponse()
-            if (request.amount + self.balance < 0):
+            if (request.amount + self.balance < 0): #return fail on insufficient funds
                 response.result = "fail"
             else:
-                self.balance += request.amount
+                self.balance += request.amount  #update local balance
 
-                if (request.id == self.id):
+                if (request.id == self.id): #propagate customer requests
                     self.propagate(request)
 
                 response.result = "success"
 
-        else:
+        elif isinstance(request, banks_pb2.BalanceRequest): #handle balance request
             response = banks_pb2.BalanceResponse()
             response.balance = self.balance        
         
