@@ -8,6 +8,8 @@ Shared constants and helper functions.
 """
 
 import grpc
+import json
+import sys
 
 BASE_PORT = 50000 
 QUERY = "query"
@@ -23,3 +25,17 @@ def get_port(id: int):
 def create_channel(id: int):
     port = get_port(id)
     return grpc.insecure_channel(f"localhost:{port}")
+
+def import_file() -> dict:
+    filename = sys.argv[1] if len(sys.argv) > 1 else INPUT_FILE
+
+    try:
+        with open(filename, 'r') as file:
+            data = json.load(file)
+            return data
+    except FileNotFoundError:
+        print(f"Error: File '{filename}' not found.")
+        return {}
+    except json.JSONDecodeError:
+        print(f"Error: Invalid JSON in '{filename}'.")
+        return {}
