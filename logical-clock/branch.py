@@ -1,8 +1,8 @@
 """
 branch.py
-CSE 531 - gRPC Project
+CSE 531 - Logical Clock Project
 tfilewic
-2025-10-26
+2025-11-14
 
 Branch server logic and RPC handlers.
 """
@@ -28,12 +28,13 @@ class Branch(banks_pb2_grpc.RPCServicer):
         self.stubList = list()
         # a list of received messages used for debugging purpose
         self.recvMsg = list()
- 
         # add all branch stubs to stub list 
         for branch in branches:
             if branch != self.id:
                 channel =  create_channel(branch)
                 self.stubList.append(banks_pb2_grpc.RPCStub(channel))
+        # logical clock
+        self.clock = 0
 
 
     def propagate(self, request):
@@ -44,17 +45,23 @@ class Branch(banks_pb2_grpc.RPCServicer):
             request (banks_pb2.TransactionRequest): The transaction to propagate.
         """
         for branchStub in self.stubList:
+            self.clock = self.clock + 1 #Lamport send
+            out = banks_pb2.TransactionRequest(
+                id=request.id, 
+                amount=request.amount, 
+                request_id=request.request_id, 
+                clock=self.clock
+            )
+
             if (request.amount > 0):
-                branchStub.Propagate_Deposit(request)
+                branchStub.Propagate_Deposit(out)
             elif (request.amount < 0):
-                branchStub.Propagate_Withdraw(request)
+                branchStub.Propagate_Withdraw(out)
 
 
     """
     Since the assignment spec requires a central handler, all RPC interface methods delegate to MsgDelivery.
     """
-    def Query(self, request, context):
-        return self.MsgDelivery(request, context)
 
     def Deposit(self, request, context):
         return self.MsgDelivery(request, context)
@@ -76,14 +83,18 @@ class Branch(banks_pb2_grpc.RPCServicer):
         Determines request type and processes accordingly.
 
         Args:
-            request: The gRPC request message (TransactionRequest or BalanceRequest).
+            request: The gRPC TransactionRequest message.
             context: The gRPC context object for the call.
 
         Returns:
-            banks_pb2.TransactionResponse or banks_pb2.BalanceResponse:
-            The appropriate response message containing result or balance.
+            banks_pb2.TransactionResponse:
+            The appropriate response message containing result.
         """
+        
         if isinstance(request, banks_pb2.TransactionRequest):   #handle deposit or withdraw
+            self.clock = max(self.clock, request.clock) + 1 #Lamport recieve
+            #TODO log receipt
+
             response = banks_pb2.TransactionResponse()
             if (request.amount + self.balance < 0): #return fail on insufficient funds
                 response.result = "fail"
@@ -93,11 +104,7 @@ class Branch(banks_pb2_grpc.RPCServicer):
                 if (request.id == self.id): #propagate customer requests
                     self.propagate(request)
 
-                response.result = "success"
-
-        elif isinstance(request, banks_pb2.BalanceRequest): #handle balance request
-            response = banks_pb2.BalanceResponse()
-            response.balance = self.balance        
+                response.result = "success"     
         
         return response
 

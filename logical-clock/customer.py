@@ -1,15 +1,15 @@
 """
 customer.py
-CSE 531 - gRPC Project
+CSE 531 - Logical Clock Project
 tfilewic
-2025-10-26
+2025-11-14
 
 Customer client logic and event execution.
 """
 
 import banks_pb2
 import banks_pb2_grpc
-from utilities import create_channel, QUERY, WITHDRAW, DEPOSIT
+from utilities import create_channel, WITHDRAW, DEPOSIT
 
 
 class Customer:
@@ -24,9 +24,11 @@ class Customer:
         # events from the input
         self.events = events
         # a list of received messages used for debugging purpose
-        self.recvMsg = list()
+        self.recvMsg = list() #TODO replace with event log
         # pointer for the stub
         self.stub = None
+        # logical clock
+        self.clock = 0
 
     
     def createStub(self):
@@ -47,33 +49,28 @@ class Customer:
 
         #process all events
         for event in self.events:
+            self.clock += 1
             interface = event["interface"]
             entry = {"interface" : interface}
 
             #handle deposits
             if interface == DEPOSIT:
-                request = banks_pb2.TransactionRequest(id=self.id, amount=event["money"])
+                request = banks_pb2.TransactionRequest(id=self.id, amount=event["money"], request_id=event["customer-request-id"], clock=self.clock)
                 response = self.stub.Deposit(request)
                 entry["result"] = response.result
 
             #handle withdrawals
             elif interface == WITHDRAW:
-                request = banks_pb2.TransactionRequest(id=self.id, amount=-event["money"])
+                request = banks_pb2.TransactionRequest(id=self.id, amount=-event["money"], request_id=event["customer-request-id"], clock=self.clock)
                 response = self.stub.Withdraw(request)
                 entry["result"] = response.result
-
-            #handle balance queries
-            elif interface == QUERY:
-                request = banks_pb2.BalanceRequest(id=self.id)
-                response = self.stub.Query(request)
-                entry["balance"] = response.balance
 
             #ignore unsupported types
             else: 
                 continue          
             
             #add response to recvMsg
-            self.recvMsg.append(entry)
+            self.recvMsg.append(entry) #TODO replace with event log
         
         #return responses
         return {"id": self.id, "recv": self.recvMsg}
