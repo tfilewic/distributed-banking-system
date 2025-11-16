@@ -26,16 +26,44 @@ class Branch(banks_pb2_grpc.RPCServicer):
         self.branches = branches
         # the list of Client stubs to communicate with the branches
         self.stubList = list()
-        # a list of received messages used for debugging purpose
-        self.recvMsg = list()
         # add all branch stubs to stub list 
         for branch in branches:
             if branch != self.id:
                 channel =  create_channel(branch)
                 self.stubList.append(banks_pb2_grpc.RPCStub(channel))
+        # a list of received messages
+        self.log = []
         # logical clock
         self.clock = 0
 
+
+    def log_request(self, request):
+        """
+        Records a log entry for a received transaction request.
+
+        Args:
+            request (banks_pb2.TransactionRequest): The incoming transaction to log.
+        """
+        if (request.id == self.id):
+            interface = ""
+            comment = f"event_recv from customer {request.id}"
+        else:
+            interface = "propagate_"
+            comment = f"event_recv from branch {request.id}"
+
+        if (request.amount < 0):
+            interface += "withdraw"
+        else:
+            interface += "deposit"
+
+        event = {
+            "customer-request-id": request.request_id, 
+            "logical_clock": self.clock, 
+            "interface": interface, 
+            "comment": comment
+        }
+
+        self.log.append(event)
 
     def propagate(self, request):
         """
@@ -88,23 +116,21 @@ class Branch(banks_pb2_grpc.RPCServicer):
 
         Returns:
             banks_pb2.TransactionResponse:
-            The appropriate response message containing result.
+            The response message.
         """
-        
+        response = banks_pb2.TransactionResponse()
+
         if isinstance(request, banks_pb2.TransactionRequest):   #handle deposit or withdraw
             self.clock = max(self.clock, request.clock) + 1 #Lamport recieve
-            #TODO log receipt
+            
+            self.log_request(request)   #log receipt
 
-            response = banks_pb2.TransactionResponse()
-            if (request.amount + self.balance < 0): #return fail on insufficient funds
-                response.result = "fail"
-            else:
+            if (request.amount + self.balance >= 0): #sufficient funds
+
                 self.balance += request.amount  #update local balance
 
                 if (request.id == self.id): #propagate customer requests
                     self.propagate(request)
-
-                response.result = "success"     
         
         return response
 

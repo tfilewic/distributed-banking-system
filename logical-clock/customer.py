@@ -2,7 +2,7 @@
 customer.py
 CSE 531 - Logical Clock Project
 tfilewic
-2025-11-14
+2025-11-15
 
 Customer client logic and event execution.
 """
@@ -23,11 +23,11 @@ class Customer:
         self.id = id
         # events from the input
         self.events = events
-        # a list of received messages used for debugging purpose
-        self.recvMsg = list() #TODO replace with event log
         # pointer for the stub
         self.stub = None
-        # logical clock
+        # a list of sent messages
+        self.log = []
+        #logical clock
         self.clock = 0
 
     
@@ -44,33 +44,40 @@ class Customer:
         Executes all customer events in order.
 
         Returns:
-            dict: A dictionary containing the received responses for this customer id.
+            dict: A dictionary containing the request log for this customer id.
         """
 
         #process all events
         for event in self.events:
             self.clock += 1
+            
             interface = event["interface"]
-            entry = {"interface" : interface}
+            customer_request_id = event["customer-request-id"]
+            entry = {
+                "customer-request-id" : customer_request_id,
+                "logical_clock" : self.clock,
+                "interface" : interface,
+                "comment" : f"event_sent from customer {self.id}"
+            }
+            self.log.append(entry)
 
             #handle deposits
             if interface == DEPOSIT:
-                request = banks_pb2.TransactionRequest(id=self.id, amount=event["money"], request_id=event["customer-request-id"], clock=self.clock)
-                response = self.stub.Deposit(request)
-                entry["result"] = response.result
+                request = banks_pb2.TransactionRequest(id=self.id, amount=event["money"], request_id=customer_request_id, clock=self.clock)
+                self.stub.Deposit(request)
 
             #handle withdrawals
             elif interface == WITHDRAW:
-                request = banks_pb2.TransactionRequest(id=self.id, amount=-event["money"], request_id=event["customer-request-id"], clock=self.clock)
-                response = self.stub.Withdraw(request)
-                entry["result"] = response.result
+                request = banks_pb2.TransactionRequest(id=self.id, amount=-event["money"], request_id=customer_request_id, clock=self.clock)
+                self.stub.Withdraw(request)
 
             #ignore unsupported types
             else: 
                 continue          
-            
-            #add response to recvMsg
-            self.recvMsg.append(entry) #TODO replace with event log
         
         #return responses
-        return {"id": self.id, "recv": self.recvMsg}
+        return {
+            "id": self.id, 
+            "type": "customer",
+            "events": self.log
+        }

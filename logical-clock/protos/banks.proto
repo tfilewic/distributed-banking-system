@@ -19,9 +19,8 @@ message TransactionRequest {
 
 }
 
-//response to the deposit or withdrawal transaction request
+//response to the deposit or withdrawal transaction request (not used)
 message TransactionResponse {
-    string result = 1;
 }
 
 //service defining all RPC interfaces for customers and branches

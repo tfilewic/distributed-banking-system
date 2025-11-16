@@ -44,26 +44,25 @@ def process_customers() -> list[dict]:
     results for debugging, and collects all responses for export.
 
     Returns:
-        list[dict]: A list of processed customer response dictionaries.
+        list[dict]: A list of sent requests from each customer.
     """
     #load input data from JSON file
     data = import_file()
     #initialize list to store results
-    output = []
+    customer_events = []
 
     #process all customer entries
     for item in data:
         if item.get("type") == "customer":
             id = item.get("id")
-            events = item.get("events")
+            events = item.get("customer-requests")
             customer = Customer(id, events)
             customer.createStub()
-            responses = customer.executeEvents()
-            responses = filter_output(responses)    #filter out "fail"
+            customer_log = customer.executeEvents()
             sleep(PROPAGATION_DELAY)    #wait for branch propagation
-            output.append(responses)
+            customer_events.append(customer_log)
 
-    return output
+    return customer_events
 
 
 def export(data: list[dict]):
@@ -81,8 +80,10 @@ def export(data: list[dict]):
 #run when script called directly
 if __name__ == "__main__":  
     try:
-        output = process_customers()
-        export(output)
+        customer_events = process_customers()
+        # branch_events = get_branch_events()
+        # event_chain = calculate_event_chain(customer_events, branch_events)
+        # export(customer_events, branch_events, event_chain)
     except grpc.RpcError as e:
         print(f"ERROR: {e.details()}")
         print("Ensure all branch servers are running before starting the client.")
