@@ -2,7 +2,7 @@
 banks.proto
 CSE 531 - Logical Clock Project
 tfilewic
-2025-11-14
+2025-11-15
 
 Defines messages and services for the distributed banking system.
 */
@@ -23,10 +23,29 @@ message TransactionRequest {
 message TransactionResponse {
 }
 
+
+//request to get a branch's log
+message BranchLogRequest {}
+
+//branch log entry
+message BranchEvent {
+    int32 customer_request_id = 1;
+    int32 logical_clock = 2;
+    string interface = 3;
+    string comment = 4;
+}
+
+//branch log 
+message BranchLog {
+    repeated BranchEvent events = 1;
+}
+
+
 //service defining all RPC interfaces for customers and branches
 service RPC {
     rpc Deposit (TransactionRequest) returns (TransactionResponse);
     rpc Withdraw (TransactionRequest) returns (TransactionResponse);
     rpc Propagate_Deposit (TransactionRequest) returns (TransactionResponse);
-    rpc Propagate_Withdraw (TransactionRequest) returns (TransactionResponse);
+    rpc Propagate_Withdraw (TransactionRequest) returns (TransactionResponse);  
+    rpc Get_Log(BranchLogRequest) returns (BranchLog);
 }

@@ -2,7 +2,7 @@
 branch.py
 CSE 531 - Logical Clock Project
 tfilewic
-2025-11-14
+2025-11-15
 
 Branch server logic and RPC handlers.
 """
@@ -102,11 +102,26 @@ class Branch(banks_pb2_grpc.RPCServicer):
 
     def Propagate_Withdraw(self, request, context):
         return self.MsgDelivery(request, context)
+    
 
+    def Get_Log(self, request, context):
+        """
+        Returns this branch's logged events.
+        """
+        response = banks_pb2.BranchLog()
+
+        for entry in self.log:
+            event = response.events.add()
+            event.customer_request_id = entry["customer-request-id"]
+            event.logical_clock = entry["logical_clock"]
+            event.interface = entry["interface"]
+            event.comment = entry["comment"]
+
+        return response
 
     def MsgDelivery(self, request, context):
         """
-        Central handler for all incoming gRPC requests.
+        Central handler for all incoming transaction gRPC requests.
 
         Determines request type and processes accordingly.
 
@@ -131,7 +146,7 @@ class Branch(banks_pb2_grpc.RPCServicer):
 
                 if (request.id == self.id): #propagate customer requests
                     self.propagate(request)
-        
+    
         return response
 
 
