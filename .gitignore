@@ -1,6 +1,7 @@
 # local docs
 *.pdf
 *.docx
+*.zip
 
 # output file
 output.json

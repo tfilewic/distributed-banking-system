@@ -42,7 +42,7 @@ def start_branches(data : list) -> None:
 if __name__ == "__main__":
     data = import_file()    #load input
     start_branches(data)    #initialize and start all branch servers
-    
+    print("Servers started")
     #keep servers running until interrupted
     try:
         for server in servers:

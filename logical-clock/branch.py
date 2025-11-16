@@ -25,19 +25,19 @@ class Branch(banks_pb2_grpc.RPCServicer):
         # the list of process IDs of the branches
         self.branches = branches
         # the list of Client stubs to communicate with the branches
-        self.stubList = list()
+        self.stubList = {}
         # add all branch stubs to stub list 
         for branch in branches:
             if branch != self.id:
                 channel =  create_channel(branch)
-                self.stubList.append(banks_pb2_grpc.RPCStub(channel))
+                self.stubList[branch] = banks_pb2_grpc.RPCStub(channel)
         # a list of received messages
         self.log = []
         # logical clock
         self.clock = 0
 
 
-    def log_request(self, request):
+    def log_receipt(self, request):
         """
         Records a log entry for a received transaction request.
 
@@ -65,6 +65,26 @@ class Branch(banks_pb2_grpc.RPCServicer):
 
         self.log.append(event)
 
+
+    def log_send(self, request, target_id, interface):
+        """
+        Records a log entry for a sent propagate event.
+
+        Args:
+            request (banks_pb2.TransactionRequest): The outgoing transaction being propagated.
+            target_branch_id (int): The branch ID this event is being sent to.
+            interface (str): The interface name ('propagate_deposit' or 'propagate_withdraw').
+        """
+        event = {
+            "customer-request-id": request.request_id,
+            "logical_clock": self.clock,
+            "interface": interface,
+            "comment": f"event_sent to branch {target_id}"
+        }
+        self.log.append(event)
+
+
+
     def propagate(self, request):
         """
         Propagates a deposit or withdrawal request to all other branches.
@@ -72,7 +92,7 @@ class Branch(banks_pb2_grpc.RPCServicer):
         Args:
             request (banks_pb2.TransactionRequest): The transaction to propagate.
         """
-        for branchStub in self.stubList:
+        for branch_id, branchStub in self.stubList:
             self.clock = self.clock + 1 #Lamport send
             out = banks_pb2.TransactionRequest(
                 id=request.id, 
@@ -81,9 +101,12 @@ class Branch(banks_pb2_grpc.RPCServicer):
                 clock=self.clock
             )
 
-            if (request.amount > 0):
+            interface = "propagate_deposit" if request.amount >= 0 else "propagate_withdraw"
+            self.log_send(out, branch_id, interface)
+
+            if (interface == "propagate_deposit"):
                 branchStub.Propagate_Deposit(out)
-            elif (request.amount < 0):
+            else:
                 branchStub.Propagate_Withdraw(out)
 
 
@@ -138,7 +161,7 @@ class Branch(banks_pb2_grpc.RPCServicer):
         if isinstance(request, banks_pb2.TransactionRequest):   #handle deposit or withdraw
             self.clock = max(self.clock, request.clock) + 1 #Lamport recieve
             
-            self.log_request(request)   #log receipt
+            self.log_receipt(request)   #log receipt
 
             if (request.amount + self.balance >= 0): #sufficient funds
 

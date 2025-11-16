@@ -9,6 +9,7 @@ Runs Customer events from input and writes output.
 
 import json
 import grpc
+import itertools
 from utilities import create_channel, import_file, OUTPUT_FILE
 from customer import Customer
 from time import sleep
@@ -107,12 +108,13 @@ def calculate_event_chain(customer_events, branch_events):
             chains[request_id] = []
         chains[request_id].append(event)
 
-    #sort chains by logical clok:
+    #sort chains by logical clock:
     for request_id in chains:
         chains[request_id].sort(key=lambda entry: entry["logical_clock"])
 
     #convert dict to list
-    return list(chains.values())
+    #return list(chains.values())
+    return list(itertools.chain.from_iterable(chains.values()))
 
 def export(customer_events, branch_events, event_chain):
     """
@@ -121,10 +123,10 @@ def export(customer_events, branch_events, event_chain):
     Args:
         data (list[dict]): List of customer response dictionaries to save.
     """
-    data = [customer_events, branch_events, event_chain]
+    data = customer_events 
     
     with open(OUTPUT_FILE, 'w') as file:
-
+        data = customer_events + branch_events + event_chain
         json.dump(data, file, indent=2)
 
 
