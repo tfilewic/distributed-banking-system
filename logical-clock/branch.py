@@ -2,7 +2,7 @@
 branch.py
 CSE 531 - Logical Clock Project
 tfilewic
-2025-11-15
+2025-11-19
 
 Branch server logic and RPC handlers.
 """
@@ -84,7 +84,6 @@ class Branch(banks_pb2_grpc.RPCServicer):
         self.log.append(event)
 
 
-
     def propagate(self, request):
         """
         Propagates a deposit or withdrawal request to all other branches.
@@ -94,7 +93,7 @@ class Branch(banks_pb2_grpc.RPCServicer):
         """
         for branch_id, branchStub in self.stubList:
             self.clock = self.clock + 1 #Lamport send
-            out = banks_pb2.TransactionRequest(
+            out = banks_pb2.TransactionRequest( #build request
                 id=request.id, 
                 amount=request.amount, 
                 request_id=request.request_id, 
@@ -102,7 +101,7 @@ class Branch(banks_pb2_grpc.RPCServicer):
             )
 
             interface = "propagate_deposit" if request.amount >= 0 else "propagate_withdraw"
-            self.log_send(out, branch_id, interface)
+            self.log_send(out, branch_id, interface)    #log send
 
             if (interface == "propagate_deposit"):
                 branchStub.Propagate_Deposit(out)
@@ -111,9 +110,8 @@ class Branch(banks_pb2_grpc.RPCServicer):
 
 
     """
-    Since the assignment spec requires a central handler, all RPC interface methods delegate to MsgDelivery.
+    Since the assignment spec requires a central handler, all RPC interface transaction methods delegate to MsgDelivery.
     """
-
     def Deposit(self, request, context):
         return self.MsgDelivery(request, context)
 
@@ -126,7 +124,6 @@ class Branch(banks_pb2_grpc.RPCServicer):
     def Propagate_Withdraw(self, request, context):
         return self.MsgDelivery(request, context)
     
-
     def Get_Log(self, request, context):
         """
         Returns this branch's logged events.
@@ -141,6 +138,7 @@ class Branch(banks_pb2_grpc.RPCServicer):
             event.comment = entry["comment"]
 
         return response
+
 
     def MsgDelivery(self, request, context):
         """

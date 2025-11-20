@@ -2,7 +2,7 @@
 banks.proto
 CSE 531 - Logical Clock Project
 tfilewic
-2025-11-15
+2025-11-19
 
 Defines messages and services for the distributed banking system.
 */
@@ -23,7 +23,6 @@ message TransactionRequest {
 message TransactionResponse {
 }
 
-
 //request to get a branch's log
 message BranchLogRequest {}
 
@@ -39,7 +38,6 @@ message BranchEvent {
 message BranchLog {
     repeated BranchEvent events = 1;
 }
-
 
 //service defining all RPC interfaces for customers and branches
 service RPC {

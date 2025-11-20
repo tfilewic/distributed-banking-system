@@ -19,8 +19,6 @@ servers = []    #list of running gRPC servers
 def start_branches(data : list) -> None:
     """
     Starts all branch servers defined in the input data.
-    Creates a Branch instance for each branch entry, registers it with a gRPC server,
-    binds the server to its port, and starts it.
     """
     branches = [item["id"] for item in data if item.get("type") == "branch"]    #collect all branch ids
 

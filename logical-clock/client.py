@@ -2,7 +2,7 @@
 client.py
 CSE 531 - gRPC Project
 tfilewic
-2025-11-15
+2025-11-19
 
 Runs Customer events from input and writes output.
 """
@@ -17,7 +17,6 @@ import banks_pb2
 import banks_pb2_grpc
 
 PROPAGATION_DELAY = 0.1
-
 
 
 
@@ -48,7 +47,18 @@ def process_customers(data) -> list[dict]:
 
     return customer_events
 
+
 def get_branch_events(data):
+    """
+    Retrieves the logged events from each branch.
+
+    Args:
+        data (list[dict]): The parsed input JSON containing customer and branch definitions.
+
+    Returns:
+        list[dict]: A list of dictionaries, one per branch, each containing
+                    the branch id, type, and its list of logged events.
+    """
     branch_events = []
     branches = [item["id"] for item in data if item.get("type") == "branch"]    #collect all branch ids
     for branch in branches:
@@ -66,6 +76,7 @@ def get_branch_events(data):
                 "comment": event.comment
             })
 
+        #add to list
         branch_events.append({
             "id" : branch,
             "type" : "branch",
@@ -116,6 +127,7 @@ def calculate_event_chain(customer_events, branch_events):
     #return list(chains.values())
     return list(itertools.chain.from_iterable(chains.values()))
 
+
 def export(customer_events, branch_events, event_chain):
     """
     Writes the processed customer responses to the output JSON file.
@@ -123,22 +135,20 @@ def export(customer_events, branch_events, event_chain):
     Args:
         data (list[dict]): List of customer response dictionaries to save.
     """
-    data = customer_events 
-    
     with open(OUTPUT_FILE, 'w') as file:
         data = customer_events + branch_events + event_chain
         json.dump(data, file, indent=2)
 
 
-
-
-
 def run():
-    data = import_file()
-    customer_events = process_customers(data)
-    branch_events = get_branch_events(data)
-    event_chain = calculate_event_chain(customer_events, branch_events)
-    export(customer_events, branch_events, event_chain)
+    """
+    Main client function.
+    """
+    data = import_file()    #load input
+    customer_events = process_customers(data)   #run customers
+    branch_events = get_branch_events(data) #fetch branch logs
+    event_chain = calculate_event_chain(customer_events, branch_events) #build output
+    export(customer_events, branch_events, event_chain) #save output
 
 
 #run when script called directly
