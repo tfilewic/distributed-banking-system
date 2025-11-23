@@ -1,0 +1,40 @@
+/*
+banks.proto
+CSE 531 - gRPC Project
+tfilewic
+2025-10-26
+
+Defines messages and services for the distributed banking system.
+*/
+
+syntax = "proto3";
+
+//request to query the current balance
+message BalanceRequest {
+    int32 id = 1;
+}
+
+//response to the balance request
+message BalanceResponse {
+    int32 balance = 1;
+}
+
+//request to make a deposit or withdrawal transaction
+message TransactionRequest {
+    int32 id = 1;
+    int32 amount = 2;
+}
+
+//response to the deposit or withdrawal transaction request
+message TransactionResponse {
+    string result = 1;
+}
+
+//service defining all RPC interfaces for customers and branches
+service RPC {
+    rpc Query (BalanceRequest) returns (BalanceResponse);
+    rpc Deposit (TransactionRequest) returns (TransactionResponse);
+    rpc Withdraw (TransactionRequest) returns (TransactionResponse);
+    rpc Propagate_Deposit (TransactionRequest) returns (TransactionResponse);
+    rpc Propagate_Withdraw (TransactionRequest) returns (TransactionResponse);
+}
