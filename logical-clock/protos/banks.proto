@@ -45,5 +45,5 @@ service RPC {
     rpc Withdraw (TransactionRequest) returns (TransactionResponse);
     rpc Propagate_Deposit (TransactionRequest) returns (TransactionResponse);
     rpc Propagate_Withdraw (TransactionRequest) returns (TransactionResponse);  
-    rpc Get_Log(BranchLogRequest) returns (BranchLog);
+    rpc Query(BranchLogRequest) returns (BranchLog);
 }

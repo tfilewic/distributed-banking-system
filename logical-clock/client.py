@@ -64,7 +64,7 @@ def get_branch_events(data):
     for branch in branches:
         channel =  create_channel(branch)
         stub =  banks_pb2_grpc.RPCStub(channel)
-        log = stub.Get_Log(banks_pb2.BranchLogRequest())
+        log = stub.Get_Log(banks_pb2.Query())
 
         #convert protobuf to dict
         events = []
