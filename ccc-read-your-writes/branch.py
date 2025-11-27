@@ -1,8 +1,8 @@
 """
 branch.py
-CSE 531 - gRPC Project
+CSE 531 - CCC Read Your Writes Project
 tfilewic
-2025-10-26
+2025-11-27
 
 Branch server logic and RPC handlers.
 """
@@ -10,6 +10,7 @@ Branch server logic and RPC handlers.
 import banks_pb2
 import banks_pb2_grpc
 from utilities import create_channel
+from time import sleep
 
 
 class Branch(banks_pb2_grpc.RPCServicer):
@@ -26,9 +27,11 @@ class Branch(banks_pb2_grpc.RPCServicer):
         self.branches = branches
         # the list of Client stubs to communicate with the branches
         self.stubList = list()
-        # a list of received messages used for debugging purpose
-        self.recvMsg = list()
- 
+        # write ids this branch has performed
+        self.write_set = set()
+        # next write_id to assign for client writes
+        self.next_write_id = 1
+
         # add all branch stubs to stub list 
         for branch in branches:
             if branch != self.id:
@@ -36,19 +39,28 @@ class Branch(banks_pb2_grpc.RPCServicer):
                 self.stubList.append(banks_pb2_grpc.RPCStub(channel))
 
 
-    def propagate(self, request):
+    def propagate(self, amount, write_id):
         """
         Propagates a deposit or withdrawal request to all other branches.
 
         Args:
             request (banks_pb2.TransactionRequest): The transaction to propagate.
         """
-        for branchStub in self.stubList:
-            if (request.amount > 0):
-                branchStub.Propagate_Deposit(request)
-            elif (request.amount < 0):
-                branchStub.Propagate_Withdraw(request)
+        propagation_request = banks_pb2.PropagationRequest(amount=amount, write_id=write_id)
 
+        for branchStub in self.stubList:
+            if (propagation_request.amount > 0):
+                branchStub.Propagate_Deposit(propagation_request)
+            elif (propagation_request.amount < 0):
+                branchStub.Propagate_Withdraw(propagation_request)
+
+    def wait_for_writes(self, client_writeset):
+        """
+        Blocks until this branch has applied all writes in the client's writeset.
+        """
+        client_writes = set(client_writeset)
+        while not client_writes.issubset(self.write_set):
+            sleep(0.01)
 
     """
     Since the assignment spec requires a central handler, all RPC interface methods delegate to MsgDelivery.
@@ -83,19 +95,37 @@ class Branch(banks_pb2_grpc.RPCServicer):
             banks_pb2.TransactionResponse or banks_pb2.BalanceResponse:
             The appropriate response message containing result or balance.
         """
-        if isinstance(request, banks_pb2.TransactionRequest):   #handle deposit or withdraw
+        if isinstance(request, banks_pb2.TransactionRequest):   #handle customer deposit or withdraw
+            self.wait_for_writes(request.writeset) #enforce read-your-writes for client requests
             response = banks_pb2.TransactionResponse()
             if (request.amount + self.balance < 0): #return fail on insufficient funds
                 response.result = "fail"
+                response.write_id = 0
             else:
                 self.balance += request.amount  #update local balance
 
-                if (request.id == self.id): #propagate customer requests
-                    self.propagate(request)
+                #generate write id
+                write_id = self.next_write_id
+                self.next_write_id += 1
+                self.write_set.add(write_id)
+
+                self.propagate(request.amount, write_id) 
 
                 response.result = "success"
+                response.write_id = write_id
+
+        elif isinstance(request, banks_pb2.PropagationRequest):   #handle propagation
+            response = banks_pb2.TransactionResponse()
+
+            if request.write_id not in self.write_set:
+                self.balance += request.amount
+                self.write_set.add(request.write_id)
+
+            response.result = "success"
+            response.write_id = request.write_id    
 
         elif isinstance(request, banks_pb2.BalanceRequest): #handle balance request
+            self.wait_for_writes(request.writeset) #enforce read-your-writes for client requests
             response = banks_pb2.BalanceResponse()
             response.balance = self.balance        
         

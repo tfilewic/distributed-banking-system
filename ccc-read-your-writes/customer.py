@@ -2,7 +2,7 @@
 customer.py
 CSE 531 - CCC Read Your Writes Project
 tfilewic
-2025-10-26
+2025-11-27
 
 Customer client logic and event execution.
 """
@@ -67,7 +67,7 @@ class Customer:
             #handle deposits and withdrawals
             if interface in {DEPOSIT, WITHDRAW}:
                 amount = event["money"] if interface == DEPOSIT else -event["money"]
-                request = banks_pb2.TransactionRequest(id=self.id, amount=amount, writeset=list(self.write_set))
+                request = banks_pb2.TransactionRequest(amount=amount, writeset=list(self.write_set))
                 response = stub.Deposit(request) if (interface == DEPOSIT) else stub.Withdraw(request)
     
                 write_id = response.write_id
@@ -79,7 +79,7 @@ class Customer:
 
             #handle balance queries
             elif interface == QUERY:
-                request = banks_pb2.BalanceRequest(id=self.id, writeset=list(self.write_set))
+                request = banks_pb2.BalanceRequest(writeset=list(self.write_set))
                 response = stub.Query(request)
                 entry["branch"] = branch
                 entry["balance"] = response.balance

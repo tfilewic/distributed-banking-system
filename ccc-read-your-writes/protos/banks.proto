@@ -11,8 +11,7 @@ syntax = "proto3";
 
 //request to query the current balance
 message BalanceRequest {
-    int32 id = 1;
-    repeated int32 writeset = 2;
+    repeated int32 writeset = 1;
 }
 
 //response to the balance request
@@ -22,16 +21,14 @@ message BalanceResponse {
 
 //customer request to make a deposit or withdrawal transaction
 message TransactionRequest {
-    int32 id = 1;
-    int32 amount = 2;
-    repeated int32 writeset = 3;    //customer's current writes
+    int32 amount = 1;
+    repeated int32 writeset = 2;    //customer's current writes
 }
 
 //branch request to propagate a deposit or withdrawal transaction
-message TransactionPropagation {
-    int32 id = 1;
-    int32 amount = 2;
-    int32 write_id = 3;
+message PropagationRequest {
+    int32 amount = 1;
+    int32 write_id = 2;
 }
 
 //response to the deposit or withdrawal transaction request
@@ -44,6 +41,6 @@ service RPC {
     rpc Query (BalanceRequest) returns (BalanceResponse);
     rpc Deposit (TransactionRequest) returns (TransactionResponse);
     rpc Withdraw (TransactionRequest) returns (TransactionResponse);
-    rpc Propagate_Deposit (TransactionPropagation) returns (TransactionResponse);
-    rpc Propagate_Withdraw (TransactionPropagation) returns (TransactionResponse);
+    rpc Propagate_Deposit (PropagationRequest) returns (TransactionResponse);
+    rpc Propagate_Withdraw (PropagationRequest) returns (TransactionResponse);
 }
