@@ -30,7 +30,7 @@ class Branch(banks_pb2_grpc.RPCServicer):
         # write ids this branch has performed
         self.write_set = set()
         # next write_id to assign for client writes
-        self.next_write_id = 1
+        self.next_write_id = self.id * 1000
 
         # add all branch stubs to stub list 
         for branch in branches:
@@ -99,7 +99,6 @@ class Branch(banks_pb2_grpc.RPCServicer):
             self.wait_for_writes(request.writeset) #enforce read-your-writes for client requests
             response = banks_pb2.TransactionResponse()
             if (request.amount + self.balance < 0): #return fail on insufficient funds
-                response.result = "fail"
                 response.write_id = 0
             else:
                 self.balance += request.amount  #update local balance
@@ -111,7 +110,6 @@ class Branch(banks_pb2_grpc.RPCServicer):
 
                 self.propagate(request.amount, write_id) 
 
-                response.result = "success"
                 response.write_id = write_id
 
         elif isinstance(request, banks_pb2.PropagationRequest):   #handle propagation
@@ -121,7 +119,6 @@ class Branch(banks_pb2_grpc.RPCServicer):
                 self.balance += request.amount
                 self.write_set.add(request.write_id)
 
-            response.result = "success"
             response.write_id = request.write_id    
 
         elif isinstance(request, banks_pb2.BalanceRequest): #handle balance request

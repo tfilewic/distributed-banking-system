@@ -55,7 +55,6 @@ class Customer:
         Returns:
             dict: A dictionary containing the received responses for this customer id.
         """
-
         #process all events
         for event in self.events:
             branch = event["branch"]

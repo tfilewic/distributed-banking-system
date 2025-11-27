@@ -58,8 +58,7 @@ def process_customers() -> list[dict]:
             events = item.get("events")
             customer = Customer(id, events)
             responses = customer.executeEvents()
-            responses = filter_output(responses)    #filter out "fail"
-            sleep(PROPAGATION_DELAY)    #wait for branch propagation
+            #responses = filter_output(responses)    #filter out "fail"
             output.append(responses)
 
     return output
