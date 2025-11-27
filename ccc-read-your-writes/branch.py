@@ -44,7 +44,8 @@ class Branch(banks_pb2_grpc.RPCServicer):
         Propagates a deposit or withdrawal request to all other branches.
 
         Args:
-            request (banks_pb2.TransactionRequest): The transaction to propagate.
+            amount (int): The amount to apply.
+            write_id (int): The unique ID of the write operation.
         """
         propagation_request = banks_pb2.PropagationRequest(amount=amount, write_id=write_id)
 
@@ -57,6 +58,9 @@ class Branch(banks_pb2_grpc.RPCServicer):
     def wait_for_writes(self, client_writeset):
         """
         Blocks until this branch has applied all writes in the client's writeset.
+
+        Args:
+            client_writeset (iterable): The set of write IDs the client has already completed.
         """
         client_writes = set(client_writeset)
         while not client_writes.issubset(self.write_set):
@@ -88,7 +92,7 @@ class Branch(banks_pb2_grpc.RPCServicer):
         Determines request type and processes accordingly.
 
         Args:
-            request: The gRPC request message (TransactionRequest or BalanceRequest).
+            request: The gRPC request message (TransactionRequest, PropagationRequest, or BalanceRequest).
             context: The gRPC context object for the call.
 
         Returns:
@@ -96,33 +100,31 @@ class Branch(banks_pb2_grpc.RPCServicer):
             The appropriate response message containing result or balance.
         """
         if isinstance(request, banks_pb2.TransactionRequest):   #handle customer deposit or withdraw
-            self.wait_for_writes(request.writeset) #enforce read-your-writes for client requests
             response = banks_pb2.TransactionResponse()
             if (request.amount + self.balance < 0): #return fail on insufficient funds
                 response.write_id = 0
             else:
                 self.balance += request.amount  #update local balance
 
-                #generate write id
-                write_id = self.next_write_id
+                write_id = self.next_write_id   #generate write id
                 self.next_write_id += 1
                 self.write_set.add(write_id)
 
-                self.propagate(request.amount, write_id) 
+                self.propagate(request.amount, write_id)    #progate writes
 
                 response.write_id = write_id
 
         elif isinstance(request, banks_pb2.PropagationRequest):   #handle propagation
             response = banks_pb2.TransactionResponse()
 
-            if request.write_id not in self.write_set:
+            if request.write_id not in self.write_set:  #idempotently update branch balance
                 self.balance += request.amount
                 self.write_set.add(request.write_id)
 
             response.write_id = request.write_id    
 
         elif isinstance(request, banks_pb2.BalanceRequest): #handle balance request
-            self.wait_for_writes(request.writeset) #enforce read-your-writes for client requests
+            self.wait_for_writes(request.writeset) #enforce read-your-writes
             response = banks_pb2.BalanceResponse()
             response.balance = self.balance        
         

@@ -34,14 +34,23 @@ class Customer:
     def createStub(self, branch_id: int):
         """
         Creates a gRPC stub for communicating with a branch and adds it to map.
+
+        Args:
+        branch_id (int): The ID of the branch to create a stub for.
         """
         channel =  create_channel(branch_id)
         stub =  banks_pb2_grpc.RPCStub(channel)
         self.stubs[branch_id] = stub
 
-    def getStub(self, branch_id: int):
+    def getStub(self, branch_id: int)  -> banks_pb2_grpc.RPCStub:
         """
         Returns a gRPC stub for the given branch; creates one if it doesn't exist.
+
+        Args:
+        branch_id (int): The ID of the branch whose stub is requested.
+
+        Returns:
+        RPCStub: The gRPC stub for the specified branch.
         """
         if branch_id not in self.stubs:
             self.createStub(branch_id)
@@ -55,7 +64,7 @@ class Customer:
         Returns:
             dict: A dictionary containing the received responses for this customer id.
         """
-        output = [] #DEBUG
+        output = []
 
         #process all events
         for event in self.events:
@@ -63,12 +72,12 @@ class Customer:
             stub = self.getStub(branch)
             
             interface = event["interface"]
-            entry = {"interface" : interface}
+            entry = {"interface": interface, "branch": branch}
 
             #handle deposits and withdrawals
             if interface in {DEPOSIT, WITHDRAW}:
-                amount = event["money"] if interface == DEPOSIT else -event["money"]
-                request = banks_pb2.TransactionRequest(amount=amount, writeset=list(self.write_set))
+                money = event["money"] if interface == DEPOSIT else -event["money"]
+                request = banks_pb2.TransactionRequest(amount=money)
                 response = stub.Deposit(request) if (interface == DEPOSIT) else stub.Withdraw(request)
     
                 write_id = response.write_id
@@ -82,21 +91,13 @@ class Customer:
             elif interface == QUERY:
                 request = banks_pb2.BalanceRequest(writeset=list(self.write_set))
                 response = stub.Query(request)
-                entry["branch"] = branch
                 entry["balance"] = response.balance
 
             #ignore unsupported types
             else: 
                 continue          
             
-            output.append({"id": self.id, "recv": entry})
-        
-        #return responses
-        return output
-    
-    '''            #add response to received_messages
-            self.received_messages.append(entry)
-        
-        #return responses
-        return "id": self.id, "recv": self.received_messages
-    '''
+            output.append({"id": self.id, "recv": [entry]}) 
+
+        return output 
+    1

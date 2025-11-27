@@ -1,8 +1,8 @@
 """
 server.py
-CSE 531 - gRPC Project
+CSE 531 - CCC Read Your Writes Project
 tfilewic
-2025-10-26
+2025-11-27
 
 Starts Branch servers from input.json and registers services.
 """
@@ -16,11 +16,14 @@ import banks_pb2_grpc
 servers = []    #list of running gRPC servers
 
 
-def start_branches(data : list) -> None:
+def start_branches(data : list):
     """
     Starts all branch servers defined in the input data.
     Creates a Branch instance for each branch entry, registers it with a gRPC server,
     binds the server to its port, and starts it.
+
+    Args:
+    data (list): Parsed input containing branch definitions.
     """
     branches = [item["id"] for item in data if item.get("type") == "branch"]    #collect all branch ids
 

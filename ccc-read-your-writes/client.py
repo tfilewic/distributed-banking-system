@@ -2,7 +2,7 @@
 client.py
 CSE 531 - CCC Read Your Writes Project
 tfilewic
-2025-11-26
+2025-11-27
 
 Runs Customer events from input and writes output.
 """
@@ -15,41 +15,19 @@ from time import sleep
 
 PROPAGATION_DELAY = 0.1
 
-
-def filter_output(responses: dict) -> dict:
-    """
-    Removes failed transaction events from a customer's response list.
-
-    Args:
-        responses (dict): The customer's full response containing a "recv" list of event results.
-
-    Returns:
-        dict: The same response dictionary with all events having result == "fail" removed.
-    """
-    events = responses.get("recv", [])   #get list of events from response
-
-    responses["recv"] = [   #replace recv list with filtered events 
-        event for event in events 
-        if event.get("result") != "fail"
-    ]
-    return responses
-
-
 def process_customers() -> list[dict]:
     """
     Executes all customer event sequences from the input file.
 
     Reads customer entries from the input JSON, runs each customer's
-    defined events sequentially, filters failed transactions, prints
-    results for debugging, and collects all responses for export.
+    defined events sequentially, and collects all responses for export.
 
     Returns:
         list[dict]: A list of processed customer response dictionaries.
     """
-    #load input data from JSON file
-    data = import_file()
-    #initialize list to store results
-    output = []
+    
+    data = import_file()    #load input data from JSON file
+    output = [] #initialize list to store results
 
     #process all customer entries
     for item in data:
@@ -58,9 +36,7 @@ def process_customers() -> list[dict]:
             events = item.get("events")
             customer = Customer(id, events)
             responses = customer.executeEvents()
-            #responses = filter_output(responses)    #filter out "fail"
             output.extend(responses)
-            #output.append(responses) DEBUG
 
     return output
 

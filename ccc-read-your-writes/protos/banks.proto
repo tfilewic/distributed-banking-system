@@ -2,7 +2,7 @@
 banks.proto
 CSE 531 - CCC Read Your Writes Project
 tfilewic
-2025-11-26
+2025-11-27
 
 Defines messages and services for the distributed banking system.
 */
@@ -22,7 +22,6 @@ message BalanceResponse {
 //customer request to make a deposit or withdrawal transaction
 message TransactionRequest {
     int32 amount = 1;
-    repeated int32 writeset = 2;    //customer's current writes
 }
 
 //branch request to propagate a deposit or withdrawal transaction
