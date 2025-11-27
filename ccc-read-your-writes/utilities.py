@@ -1,8 +1,8 @@
 """
 utilties.py
-CSE 531 - gRPC Project
+CSE 531 - CCC Read Your Writes Project
 tfilewic
-2025-10-26
+2025-11-26
 
 Shared constants and helper functions.
 """
@@ -17,6 +17,8 @@ DEPOSIT = "deposit"
 WITHDRAW = "withdraw"
 INPUT_FILE = "input.json"
 OUTPUT_FILE = "output.json"
+SUCCESS = "success"
+FAIL = "fail"
 
 
 def get_port(id: int) -> int:

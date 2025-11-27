@@ -1,8 +1,8 @@
 """
 client.py
-CSE 531 - gRPC Project
+CSE 531 - CCC Read Your Writes Project
 tfilewic
-2025-10-26
+2025-11-26
 
 Runs Customer events from input and writes output.
 """
@@ -57,7 +57,6 @@ def process_customers() -> list[dict]:
             id = item.get("id")
             events = item.get("events")
             customer = Customer(id, events)
-            customer.createStub()
             responses = customer.executeEvents()
             responses = filter_output(responses)    #filter out "fail"
             sleep(PROPAGATION_DELAY)    #wait for branch propagation

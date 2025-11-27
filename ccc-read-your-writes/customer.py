@@ -1,6 +1,6 @@
 """
 customer.py
-CSE 531 - gRPC Project
+CSE 531 - CCC Read Your Writes Project
 tfilewic
 2025-10-26
 
@@ -9,7 +9,7 @@ Customer client logic and event execution.
 
 import banks_pb2
 import banks_pb2_grpc
-from utilities import create_channel, QUERY, WITHDRAW, DEPOSIT
+from utilities import create_channel, QUERY, WITHDRAW, DEPOSIT, SUCCESS, FAIL
 
 
 class Customer:
@@ -23,19 +23,30 @@ class Customer:
         self.id = id
         # events from the input
         self.events = events
+        # set of writes this customer has completed
+        self.write_set = set()
         # a list of received messages used for debugging purpose
-        self.recvMsg = list()
-        # pointer for the stub
-        self.stub = None
+        self.received_messages = list()
+        # map of stubs
+        self.stubs = {}
 
     
-    def createStub(self):
+    def createStub(self, branch_id: int):
         """
-        Creates a gRPC stub for communicating with the branch that shares this customer's ID.
+        Creates a gRPC stub for communicating with a branch and adds it to map.
         """
-        channel =  create_channel(self.id)
-        self.stub =  banks_pb2_grpc.RPCStub(channel)
+        channel =  create_channel(branch_id)
+        stub =  banks_pb2_grpc.RPCStub(channel)
+        self.stubs[branch_id] = stub
 
+    def getStub(self, branch_id: int):
+        """
+        Returns a gRPC stub for the given branch; creates one if it doesn't exist.
+        """
+        if branch_id not in self.stubs:
+            self.createStub(branch_id)
+
+        return self.stubs[branch_id]
 
     def executeEvents(self) -> dict:
         """
@@ -47,33 +58,38 @@ class Customer:
 
         #process all events
         for event in self.events:
+            branch = event["branch"]
+            stub = self.getStub(branch)
+            
             interface = event["interface"]
             entry = {"interface" : interface}
 
-            #handle deposits
-            if interface == DEPOSIT:
-                request = banks_pb2.TransactionRequest(id=self.id, amount=event["money"])
-                response = self.stub.Deposit(request)
-                entry["result"] = response.result
-
-            #handle withdrawals
-            elif interface == WITHDRAW:
-                request = banks_pb2.TransactionRequest(id=self.id, amount=-event["money"])
-                response = self.stub.Withdraw(request)
-                entry["result"] = response.result
+            #handle deposits and withdrawals
+            if interface in {DEPOSIT, WITHDRAW}:
+                amount = event["money"] if interface == DEPOSIT else -event["money"]
+                request = banks_pb2.TransactionRequest(id=self.id, amount=amount, writeset=list(self.write_set))
+                response = stub.Deposit(request) if (interface == DEPOSIT) else stub.Withdraw(request)
+    
+                write_id = response.write_id
+                if (write_id == 0):
+                    entry["result"] = FAIL
+                else:
+                    entry["result"] = SUCCESS
+                    self.write_set.add(write_id)
 
             #handle balance queries
             elif interface == QUERY:
-                request = banks_pb2.BalanceRequest(id=self.id)
-                response = self.stub.Query(request)
+                request = banks_pb2.BalanceRequest(id=self.id, writeset=list(self.write_set))
+                response = stub.Query(request)
+                entry["branch"] = branch
                 entry["balance"] = response.balance
 
             #ignore unsupported types
             else: 
                 continue          
             
-            #add response to recvMsg
-            self.recvMsg.append(entry)
+            #add response to received_messages
+            self.received_messages.append(entry)
         
         #return responses
-        return {"id": self.id, "recv": self.recvMsg}
+        return {"id": self.id, "recv": self.received_messages}
