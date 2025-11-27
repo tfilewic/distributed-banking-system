@@ -1,8 +1,8 @@
 /*
 banks.proto
-CSE 531 - gRPC Project
+CSE 531 - CCC Read Your Writes Project
 tfilewic
-2025-10-26
+2025-11-26
 
 Defines messages and services for the distributed banking system.
 */
@@ -12,6 +12,7 @@ syntax = "proto3";
 //request to query the current balance
 message BalanceRequest {
     int32 id = 1;
+    repeated int32 writeset = 2;
 }
 
 //response to the balance request
@@ -19,15 +20,23 @@ message BalanceResponse {
     int32 balance = 1;
 }
 
-//request to make a deposit or withdrawal transaction
+//customer request to make a deposit or withdrawal transaction
 message TransactionRequest {
     int32 id = 1;
     int32 amount = 2;
+    repeated int32 writeset = 3;    //customer's current writes
+}
+
+//branch request to propagate a deposit or withdrawal transaction
+message TransactionPropagation {
+    int32 id = 1;
+    int32 amount = 2;
+    int32 write_id = 3;
 }
 
 //response to the deposit or withdrawal transaction request
 message TransactionResponse {
-    string result = 1;
+    int32 write_id = 1;    //0 for failure
 }
 
 //service defining all RPC interfaces for customers and branches
@@ -35,6 +44,6 @@ service RPC {
     rpc Query (BalanceRequest) returns (BalanceResponse);
     rpc Deposit (TransactionRequest) returns (TransactionResponse);
     rpc Withdraw (TransactionRequest) returns (TransactionResponse);
-    rpc Propagate_Deposit (TransactionRequest) returns (TransactionResponse);
-    rpc Propagate_Withdraw (TransactionRequest) returns (TransactionResponse);
+    rpc Propagate_Deposit (TransactionPropagation) returns (TransactionResponse);
+    rpc Propagate_Withdraw (TransactionPropagation) returns (TransactionResponse);
 }
