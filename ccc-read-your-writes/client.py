@@ -59,7 +59,8 @@ def process_customers() -> list[dict]:
             customer = Customer(id, events)
             responses = customer.executeEvents()
             #responses = filter_output(responses)    #filter out "fail"
-            output.append(responses)
+            output.extend(responses)
+            #output.append(responses) DEBUG
 
     return output
 

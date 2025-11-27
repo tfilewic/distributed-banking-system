@@ -55,6 +55,8 @@ class Customer:
         Returns:
             dict: A dictionary containing the received responses for this customer id.
         """
+        output = [] #DEBUG
+
         #process all events
         for event in self.events:
             branch = event["branch"]
@@ -87,8 +89,14 @@ class Customer:
             else: 
                 continue          
             
-            #add response to received_messages
+            output.append({"id": self.id, "recv": entry})
+        
+        #return responses
+        return output
+    
+    '''            #add response to received_messages
             self.received_messages.append(entry)
         
         #return responses
-        return {"id": self.id, "recv": self.received_messages}
+        return "id": self.id, "recv": self.received_messages
+    '''
