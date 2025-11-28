@@ -1,8 +1,8 @@
 """
 utilties.py
-CSE 531 - CCC Read Your Writes Project
+CSE 531 - CCC Monotonic Writes Project
 tfilewic
-2025-11-26
+2025-11-27
 
 Shared constants and helper functions.
 """
@@ -15,10 +15,8 @@ BASE_PORT = 50000   #base port used to assign ports sequentially
 QUERY = "query"
 DEPOSIT = "deposit"
 WITHDRAW = "withdraw"
-INPUT_FILE = "client-centric-consistency_input.json"
+INPUT_FILE = "input.json"
 OUTPUT_FILE = "output.json"
-SUCCESS = "success"
-FAIL = "fail"
 
 
 def get_port(id: int) -> int:

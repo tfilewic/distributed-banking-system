@@ -1,6 +1,6 @@
 """
 branch.py
-CSE 531 - CCC Read Your Writes Project
+CSE 531 - CCC Monotonic Writes Project
 tfilewic
 2025-11-27
 
@@ -28,7 +28,7 @@ class Branch(banks_pb2_grpc.RPCServicer):
         # the list of Client stubs to communicate with the branches
         self.stubList = list()
         # write ids this branch has performed
-        self.write_set = set()
+        self.writeset = set()
         # next write_id to assign for client writes
         self.next_write_id = self.id * 1000
 
@@ -39,15 +39,16 @@ class Branch(banks_pb2_grpc.RPCServicer):
                 self.stubList.append(banks_pb2_grpc.RPCStub(channel))
 
 
-    def propagate(self, amount, write_id):
+    def propagate(self, amount, write_id, writeset):
         """
         Propagates a deposit or withdrawal request to all other branches.
 
         Args:
             amount (int): The amount to apply.
             write_id (int): The unique ID of the write operation.
+            writeset (list[int]): IDs of all prior client writes this write depends on.
         """
-        propagation_request = banks_pb2.PropagationRequest(amount=amount, write_id=write_id)
+        propagation_request = banks_pb2.PropagationRequest(amount=amount, write_id=write_id, writeset=writeset)
 
         for branchStub in self.stubList:
             if (propagation_request.amount > 0):
@@ -63,7 +64,7 @@ class Branch(banks_pb2_grpc.RPCServicer):
             client_writeset (iterable): The set of write IDs the client has already completed.
         """
         client_writes = set(client_writeset)
-        while not client_writes.issubset(self.write_set):
+        while not client_writes.issubset(self.writeset):
             sleep(0.01)
 
     """
@@ -100,6 +101,8 @@ class Branch(banks_pb2_grpc.RPCServicer):
             The appropriate response message containing result or balance.
         """
         if isinstance(request, banks_pb2.TransactionRequest):   #handle customer deposit or withdraw
+            self.wait_for_writes(request.writeset) #enforce monotonic-writes
+
             response = banks_pb2.TransactionResponse()
             if (request.amount + self.balance < 0): #return fail on insufficient funds
                 response.write_id = 0
@@ -108,23 +111,23 @@ class Branch(banks_pb2_grpc.RPCServicer):
 
                 write_id = self.next_write_id   #generate write id
                 self.next_write_id += 1
-                self.write_set.add(write_id)
+                self.writeset.add(write_id)
 
-                self.propagate(request.amount, write_id)    #progate writes
+                self.propagate(request.amount, write_id, self.writeset)   #progate writes
 
                 response.write_id = write_id
 
         elif isinstance(request, banks_pb2.PropagationRequest):   #handle propagation
+            self.wait_for_writes(request.writeset) #enforce monotonic-writes
             response = banks_pb2.TransactionResponse()
 
-            if request.write_id not in self.write_set:  #idempotently update branch balance
+            if request.write_id not in self.writeset:  #idempotently update branch balance
                 self.balance += request.amount
-                self.write_set.add(request.write_id)
+                self.writeset.add(request.write_id)
 
             response.write_id = request.write_id    
 
         elif isinstance(request, banks_pb2.BalanceRequest): #handle balance request
-            self.wait_for_writes(request.writeset) #enforce read-your-writes
             response = banks_pb2.BalanceResponse()
             response.balance = self.balance        
         

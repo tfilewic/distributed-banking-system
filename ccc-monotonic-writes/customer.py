@@ -1,6 +1,6 @@
 """
 customer.py
-CSE 531 - CCC Read Your Writes Project
+CSE 531 - CCC Monotonic Writes Project
 tfilewic
 2025-11-27
 
@@ -9,7 +9,7 @@ Customer client logic and event execution.
 
 import banks_pb2
 import banks_pb2_grpc
-from utilities import create_channel, QUERY, WITHDRAW, DEPOSIT, SUCCESS, FAIL
+from utilities import create_channel, QUERY, WITHDRAW, DEPOSIT
 
 
 class Customer:
@@ -24,7 +24,7 @@ class Customer:
         # events from the input
         self.events = events
         # set of writes this customer has completed
-        self.write_set = set()
+        self.writeset = set()
         # a list of received messages used for debugging purpose
         self.received_messages = list()
         # map of stubs
@@ -62,7 +62,7 @@ class Customer:
         Executes all customer events in order.
 
         Returns:
-            dict: A dictionary containing the received responses for this customer id.
+            dict: A dictionary containing the received query responses for this customer id.
         """
         output = []
 
@@ -70,34 +70,28 @@ class Customer:
         for event in self.events:
             branch = event["branch"]
             stub = self.getStub(branch)
-            
             interface = event["interface"]
-            entry = {"interface": interface, "branch": branch}
-
+    
             #handle deposits and withdrawals
             if interface in {DEPOSIT, WITHDRAW}:
                 money = event["money"] if interface == DEPOSIT else -event["money"]
-                request = banks_pb2.TransactionRequest(amount=money)
+                request = banks_pb2.TransactionRequest(amount=money, writeset=list(self.writeset))
                 response = stub.Deposit(request) if (interface == DEPOSIT) else stub.Withdraw(request)
     
                 write_id = response.write_id
-                if (write_id == 0):
-                    entry["result"] = FAIL
-                else:
-                    entry["result"] = SUCCESS
-                    self.write_set.add(write_id)
+                if (write_id != 0):
+                    self.writeset.add(response.write_id)
 
             #handle balance queries
             elif interface == QUERY:
-                request = banks_pb2.BalanceRequest(writeset=list(self.write_set))
+                request = banks_pb2.BalanceRequest()
                 response = stub.Query(request)
-                entry["balance"] = response.balance
+                entry = {"id": event["id"], "balance": response.balance}
+                output.append(entry) 
 
             #ignore unsupported types
             else: 
                 continue          
-            
-            output.append({"id": self.id, "recv": [entry]}) 
 
         return output 
     1

@@ -1,6 +1,6 @@
 """
 server.py
-CSE 531 - CCC Read Your Writes Project
+CSE 531 - CCC Monotonic Writes Project
 tfilewic
 2025-11-27
 
@@ -14,7 +14,6 @@ from branch import Branch
 import banks_pb2_grpc
 
 servers = []    #list of running gRPC servers
-
 
 def start_branches(data : list):
     """

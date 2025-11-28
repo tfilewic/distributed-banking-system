@@ -1,6 +1,6 @@
 /*
 banks.proto
-CSE 531 - CCC Read Your Writes Project
+CSE 531 - CCC Monotonic Writes Project
 tfilewic
 2025-11-27
 
@@ -11,7 +11,6 @@ syntax = "proto3";
 
 //request to query the current balance
 message BalanceRequest {
-    repeated int32 writeset = 1;
 }
 
 //response to the balance request
@@ -22,12 +21,14 @@ message BalanceResponse {
 //customer request to make a deposit or withdrawal transaction
 message TransactionRequest {
     int32 amount = 1;
+    repeated int32 writeset = 2;
 }
 
 //branch request to propagate a deposit or withdrawal transaction
 message PropagationRequest {
     int32 amount = 1;
     int32 write_id = 2;
+    repeated int32 writeset = 3;
 }
 
 //response to the deposit or withdrawal transaction request

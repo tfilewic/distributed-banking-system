@@ -1,6 +1,6 @@
 """
 client.py
-CSE 531 - CCC Read Your Writes Project
+CSE 531 - CCC Monotonic Writes Project
 tfilewic
 2025-11-27
 
@@ -11,7 +11,6 @@ import json
 import grpc
 from utilities import import_file, OUTPUT_FILE
 from customer import Customer
-from time import sleep
 
 PROPAGATION_DELAY = 0.1
 
