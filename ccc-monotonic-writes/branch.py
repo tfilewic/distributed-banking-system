@@ -112,8 +112,7 @@ class Branch(banks_pb2_grpc.RPCServicer):
                 write_id = self.next_write_id   #generate write id
                 self.next_write_id += 1
                 self.writeset.add(write_id)
-
-                self.propagate(request.amount, write_id, self.writeset)   #progate writes
+                self.propagate(request.amount, write_id, request.writeset)   #progate writes
 
                 response.write_id = write_id
 
